@@ -7,14 +7,16 @@ extern crate panic_semihosting;
 extern crate cortex_m_semihosting;
 extern crate heapless;
 
+mod alphabet;
+
 use cortex_m_rt::entry;
 use stm32f1xx_hal::prelude::*;
 use void::ResultVoidExt;
 use embedded_hal::digital::v2::OutputPin;
-use heapless::FnvIndexMap;
 use heapless::String;
 use heapless::consts::*;
 use cortex_m_semihosting::dbg;
+pub use alphabet::morse_map;
 
 const DIT: u16 = 200;
 const DAH: u16 = DIT * 3;
@@ -34,23 +36,14 @@ fn main() -> ! {
     let mut gpioc = device.GPIOC.split(&mut rcc.apb2);
     let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh);
 
-    let mut morse_map = FnvIndexMap::<_, _, U32>::new();
-    morse_map.insert(' ', " ").unwrap();
-    morse_map.insert('h', "....").unwrap();
-    morse_map.insert('e', ".").unwrap();
-    morse_map.insert('l', ".-..").unwrap();
-    morse_map.insert('o', "---").unwrap();
-    morse_map.insert('m', "--").unwrap();
-    morse_map.insert('r', ".-.").unwrap();
-    morse_map.insert('s', "...").unwrap();
-
     let my_string: String<U16> = String::from("hello morse");
+    let letter_mapping = morse_map::get_morse_map();
 
     let mut show_word = || {
         led.set_high().void_unwrap();
 
         for c in my_string.chars() {
-            match morse_map.get(&c) {
+            match letter_mapping.get(&c) {
                 Some(letter) => {
                     for symbol in letter.chars() {
                         match symbol {
